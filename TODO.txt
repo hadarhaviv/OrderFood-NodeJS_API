@@ -1,0 +1,8 @@
+1. check if email already exist in sign 
+2.fix error messages
+2.check if restaurant exist
+4.get orders by userid
+5.get orders by restaurant id
+6. validate total price in server side
+7. update Orders in restaurant if needed
+
