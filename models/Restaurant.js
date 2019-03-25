@@ -19,11 +19,6 @@ const restaurantScheme = new Schema({
       price: {
         type: Number,
         required: true
-      },
-      category: {
-        type: String,
-        required: true,
-        enum: ["firstcourse", "maincourse", "dessert", "drink"]
       }
     }
   ],

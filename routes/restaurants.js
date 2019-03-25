@@ -1,28 +1,33 @@
 const express = require("express");
 const router = express.Router();
 const Joi = require("joi");
-const Restaruant = require("../models/Restaurant");
+const passport = require("passport");
+const Restaurant = require("../models/Restaurant");
 const joiToForms = require("joi-errors-for-forms").form;
 const convertToForms = joiToForms();
 
-router.get("/all", (req, res) => {
-  const errors = {};
-  Restaruant.find()
-    .then(Restaruants => {
-      if (!Restaruants) {
-        errors.norestaurants = "There is no Restaruants";
-        return res.status(404).json(errors);
-      }
-      res.json(Restaruants);
-    })
-    .catch(err => {
-      res.status(404).json({ Restaruants: "There are no Restaruants" });
-    });
-});
+router.get(
+  "/all",
+  passport.authenticate("jwt", { session: false }),
+  (req, res) => {
+    const errors = {};
+    Restaurant.find()
+      .then(Restaurants => {
+        if (!Restaurants) {
+          errors.norestaurants = "There is no Restaurants";
+          return res.status(404).json(errors);
+        }
+        res.json(Restaurants);
+      })
+      .catch(err => {
+        res.status(404).json({ Restaurants: "There are no Restaurants" });
+      });
+  }
+);
 
-router.get("/owner/:ownerid", (req, res) => {
+router.get("/owner/:ownerid", passport.authenticate("jwt", { session: false }), (req, res) => {
   const errors = {};
-  Restaruant.find({ owners: req.params.ownerid })
+  Restaurant.findOne({ owners: req.params.ownerid })
     .then(restaurant => {
       if (!restaurant) {
         errors.owners = "there are no restaurants for this id";
@@ -33,9 +38,9 @@ router.get("/owner/:ownerid", (req, res) => {
     .catch(err => res.status(404).json(errors));
 });
 
-router.get("/:id", (req, res) => {
+router.get("/:id", passport.authenticate("jwt", { session: false }), (req, res) => {
   const errors = {};
-  Restaruant.findById(req.params.id)
+  Restaurant.findById(req.params.id)
     .then(restaurant => {
       if (!restaurant) {
         errors.restaurant = "there are no restaurants for this id";
@@ -46,6 +51,61 @@ router.get("/:id", (req, res) => {
     .catch(err => res.status(404).json(errors));
 });
 
+router.post("/:id/menu", passport.authenticate("jwt", { session: false }), (req, res) => {
+  const joiOptions = { convert: true, abortEarly: false };
+  let menuItem = Joi.object().keys({
+    name: Joi.string().required(),
+    price: Joi.number()
+      .precision(2)
+      .required(),
+    _id: Joi.any()
+  });
+
+  const schema = Joi.array().items(menuItem);
+
+  Joi.validate(req.body, schema, joiOptions, (errs, convertedValues) => {
+    if (errs) {
+      return res.status(400).json(convertToForms(errs));
+    }
+
+    Restaurant.findOneAndUpdate(
+      { _id: req.params.id },
+      { $set: { menu: convertedValues } },
+      { new: true }
+    ).then(restaurant => {
+      res.json(restaurant);
+    });
+  });
+});
+
+router.post("/:id/hours", passport.authenticate("jwt", { session: false }), (req, res) => {
+  const joiOptions = { convert: true, abortEarly: false };
+
+  const schema = Joi.object().keys({
+    open: Joi.string().required(),
+    close: Joi.string().required()
+  });
+
+  Joi.validate(req.body, schema, joiOptions, (errs, convertedValues) => {
+    if (errs) {
+      return res.status(400).json(convertToForms(errs));
+    }
+
+    const newHours = {
+      open: convertedValues.open,
+      close: convertedValues.close
+    };
+
+    Restaurant.findOneAndUpdate(
+      { _id: req.params.id },
+      { $set: { openhours: newHours } },
+      { new: true }
+    ).then(restaurant => {
+      res.json(restaurant);
+    });
+  });
+});
+
 router.post("/", (req, res) => {
   const joiOptions = { convert: true, abortEarly: false };
 
@@ -53,9 +113,6 @@ router.post("/", (req, res) => {
     name: Joi.string().required(),
     price: Joi.number()
       .precision(2)
-      .required(),
-    category: Joi.any()
-      .allow(["firstcourse", "maincourse", "dessert", "drink"])
       .required()
   });
 
@@ -82,7 +139,7 @@ router.post("/", (req, res) => {
       return res.status(400).json(convertToForms(errs));
     }
 
-    const newRestaurant = new Restaruant({
+    const newRestaurant = new Restaurant({
       name: convertedValues.name,
       image: convertedValues.image,
       menu: convertedValues.menu,
