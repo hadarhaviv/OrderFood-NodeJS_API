@@ -56,7 +56,7 @@ router.post("/", (req, res) => {
 });
 
 router.post("/login", (req, res) => {
-  // const errors = {};
+  const errors = {};
   const email = req.body.email;
   const password = req.body.password;
 
@@ -78,7 +78,7 @@ router.post("/login", (req, res) => {
 
     User.findOne({ email }).then(user => {
       if (!user) {
-        // errors.email = "User not found";
+        errors.email = "User not found";
         res.status(404).json(errors);
       }
       bcrypt
@@ -97,7 +97,7 @@ router.post("/login", (req, res) => {
               }
             );
           } else {
-            // errors.password = "Password incorrect";
+            errors.password = "Password incorrect";
             return res.status(400).json(errors);
           }
         })
@@ -106,8 +106,6 @@ router.post("/login", (req, res) => {
         });
     });
   });
-
- 
 });
 
 module.exports = router;
